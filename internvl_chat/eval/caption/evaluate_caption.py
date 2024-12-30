@@ -34,6 +34,12 @@ ds_collections = {
         'max_new_tokens': 30,
         'min_new_tokens': 8,
     },
+    'tcga_gbm_llg_512': {
+        'root': 'data/tcga_gbm_llg_512/',
+        'annotation': 'data/tcga_gbm_llg_512/annotations/TCGA_GBMLLG_512_test.jsonl',
+        'max_new_tokens': 30,
+        'min_new_tokens': 8,
+    },
 }
 
 
@@ -43,6 +49,12 @@ class CaptionDataset(torch.utils.data.Dataset):
                  use_thumbnail=False, max_num=6):
         if name == 'coco':
             self.images = json.load(open(annotation))
+        elif name == 'tcga_gbm_llg_512':
+            # Read the jsonl file line by line
+            self.images = []
+            with open(annotation, 'r') as f:
+                for line in f:
+                    self.images.append(json.loads(line))
         else:
             self.images = json.load(open(annotation))['images']
         self.name = name
@@ -62,6 +74,11 @@ class CaptionDataset(torch.utils.data.Dataset):
             filename = self.images[idx]['image']
             image_id = int(filename.split('_')[-1].replace('.jpg', ''))
             image_path = os.path.join(self.root, filename)
+
+        elif self.name == 'tcga_gbm_llg_512':
+            # image_id = self.images[idx]['id']
+            image_path = os.path.join(self.root, self.images[idx]['image'])
+
         else:
             image_id = self.images[idx]['id']
             if 'file_name' in self.images[idx]:

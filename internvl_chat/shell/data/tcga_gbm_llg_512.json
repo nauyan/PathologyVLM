@@ -1,0 +1,9 @@
+{
+    "tcga_gbmllg": {
+      "root": "data/TCGA_GBM_LLG_512",
+      "annotation": "data/TCGA_GBM_LLG_512/annotations/TCGA_GBM_LLG_512_train.jsonl",
+      "data_augment": false,
+      "repeat_time": 1,
+      "length": 10497
+    }
+  }

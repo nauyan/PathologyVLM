@@ -1,0 +1,9 @@
+{
+    "custom_coco_dataset": {
+      "root": "data/coco",
+      "annotation": "data/coco/annotations/coco_karpathy_train_567k.jsonl",
+      "data_augment": false,
+      "repeat_time": 1,
+      "length": 566748
+    }
+  }

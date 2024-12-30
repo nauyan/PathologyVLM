@@ -1,0 +1,9 @@
+{
+    "pubmed_dataset": {
+      "root": "data/pubmed_dataset",
+      "annotation": "data/pubmed_dataset/annotations/pubmed_train.jsonl",
+      "data_augment": false,
+      "repeat_time": 1,
+      "length": 2977
+    }
+  }

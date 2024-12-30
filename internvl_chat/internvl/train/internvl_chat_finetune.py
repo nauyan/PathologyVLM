@@ -43,6 +43,7 @@ from transformers import (AutoConfig, AutoModelForCausalLM, AutoTokenizer,
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils.logging import (enable_default_handler,
                                         enable_explicit_format, set_verbosity)
+from internvl.model.internvl_chat.virchow import get_virchow_model
 
 # Apply necessary patches for the transformers library
 replace_llama_rmsnorm_with_fused_rmsnorm()
@@ -158,7 +159,7 @@ class DataTrainingArguments:
         },
     )
     force_image_size: Optional[int] = field(
-        default=448,
+        default=224,
         metadata={'help': 'Set the desired size for the image. Default is 224.'},
     )
     down_sample_ratio: Optional[float] = field(
@@ -614,6 +615,8 @@ def main():
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
+    
+
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     # send_example_telemetry('InternV-Chat', model_args, data_args)
@@ -624,7 +627,7 @@ def main():
         datefmt='%m/%d/%Y %H:%M:%S',
         handlers=[logging.StreamHandler(sys.stdout)],
     )
-
+    
     if training_args.should_log:
         # The default of training_args.log_level is passive, so we set log level at info here to have that default.
         transformers.utils.logging.set_verbosity_info()
@@ -641,6 +644,7 @@ def main():
         + f'distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}'
     )
     logger.info(f'Training/evaluation parameters {training_args}')
+    logger.info(f'Vision path is : {model_args.vision_path}')
 
     # Detecting last checkpoint and eventually continue from last checkpoint.
     last_checkpoint = None
@@ -675,7 +679,16 @@ def main():
 
     if model_args.model_name_or_path is not None:
         logger.info('Loading InternVLChatModel...')
+        
+
         config = InternVLChatConfig.from_pretrained(model_args.model_name_or_path)
+
+        # if model_args.vision_path is not None or model_args.use_llm_lora > 0 or model_args.use_backbone_lora > 0:
+        #     config.use_llm_lora = model_args.use_llm_lora
+        #     config.use_backbone_lora = model_args.use_backbone_lora
+        #     logger.info(f'SET THE LORA CONFIGURATION')
+
+        logger.info(f'Pretrained configurations is; {config}')
         config.vision_config.drop_path_rate = model_args.drop_path_rate
         if config.llm_config.model_type == 'internlm2':
             config.llm_config.attn_implementation = 'flash_attention_2'  # for InternLM
@@ -690,8 +703,17 @@ def main():
         config.ps_version = model_args.ps_version
         config.min_dynamic_patch = data_args.min_dynamic_patch
         config.max_dynamic_patch = data_args.max_dynamic_patch
+        ##custom configuration
+        config.force_image_size = 224
+        config.vision_config.image_size = 224
+
+        if model_args.vision_path is not None:
+            logger.info(f'Loading Virchow vision model')
+            virchow_vision_model = get_virchow_model()
+        
         model = InternVLChatModel.from_pretrained(
-            model_args.model_name_or_path, torch_dtype=torch.bfloat16, config=config)
+            model_args.model_name_or_path, torch_dtype=torch.bfloat16, config=config, vision_model = virchow_vision_model if model_args.vision_path else None)
+        
     else:
         logger.info('Loading ViT-6B...')
         vision_config = InternVisionConfig.from_pretrained(model_args.vision_path)
@@ -758,7 +780,7 @@ def main():
 
     model.language_model.config.use_cache = False
     model.vision_model.gradient_checkpointing = True
-    model.vision_model.encoder.gradient_checkpointing = True
+    # model.vision_model.encoder.gradient_checkpointing = True
     if model_args.grad_checkpoint:
         model.language_model._set_gradient_checkpointing()
 
@@ -768,33 +790,66 @@ def main():
         min_dynamic_patch=data_args.min_dynamic_patch, max_dynamic_patch=data_args.max_dynamic_patch,
         normalize_type=data_args.normalize_type)
 
+    logger.info(f'Model args are: {model_args}')
+    logger.info(f'Data args: {data_args}')
+    logger.info(f'training args: {training_args}')
+
+    ##saving arguments
+    output_dir = training_args.output_dir
+
+    # Ensure the output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    # File path for saving the arguments
+    file_path = os.path.join(output_dir, 'Arguments.txt')
+
+    # Collect the arguments in a string format
+    arguments_text = f"""
+    Model args are: {model_args}
+    Data args: {data_args}
+    Training args: {training_args}
+    """
+
+    # Write the arguments to the file
+    with open(file_path, 'w') as file:
+        file.write(arguments_text)
+
+    print(f"Arguments saved to {file_path}")
+
     def _freeze_params(module):
         for param in module.parameters():
             param.requires_grad = False
 
     if model_args.freeze_backbone:
         # model.vision_model = model.vision_model.eval()
+        logger.info(f'freezing vision_model')
         _freeze_params(model.vision_model)
 
     if model_args.freeze_llm:
+        logger.info(f'freezing llm')
         model.language_model = model.language_model.eval()
         _freeze_params(model.language_model)
 
     if model_args.unfreeze_lm_head:
+        logger.info(f'unfreezing lm_head')
         model.language_model.lm_head.requires_grad = True
 
     if model_args.use_backbone_lora:
+        logger.info(f'== using back bone lora ==')
         model.wrap_backbone_lora(r=model_args.use_backbone_lora, lora_alpha=2 * model_args.use_backbone_lora)
         model.config.use_backbone_lora = model_args.use_backbone_lora
 
     if model_args.use_llm_lora:
+        logger.info(f'== using llm lora ==')
         model.wrap_llm_lora(r=model_args.use_llm_lora, lora_alpha=2 * model_args.use_llm_lora)
         model.config.use_llm_lora = model_args.use_llm_lora
 
     if model_args.freeze_mlp:
+        logger.info(f'freezing mlp')
         _freeze_params(model.mlp1)
 
     if model_args.unfreeze_vit_layers != 0:
+        logger.info(f'unfreezing vit layer')
         layers = model.vision_model.encoder.layers[model_args.unfreeze_vit_layers:]
         for k, v in layers.named_parameters():
             logger.info(f'Unfreezing ViT layer: {k}')
@@ -806,6 +861,14 @@ def main():
             if param.requires_grad:
                 logger.info(name)
 
+    total = 0
+    trainable = 0
+
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total = sum(p.numel() for p in model.parameters())
+
+    logger.info(f'Trainable parameters are: {trainable}')
+    logger.info(f'Trainable %: {trainable/total * 100}') 
     # set seed for torch dataloaders
     set_seed(training_args.seed)
 

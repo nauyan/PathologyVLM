@@ -6,8 +6,8 @@
 
 import copy
 
-from internvl.model.internlm2.configuration_internlm2 import InternLM2Config
-from internvl.model.phi3.configuration_phi3 import Phi3Config
+from internvl_chat.internvl.model.internlm2.configuration_internlm2 import InternLM2Config
+from internvl_chat.internvl.model.phi3.configuration_phi3 import Phi3Config
 from transformers import AutoConfig, LlamaConfig, Qwen2Config
 from transformers.configuration_utils import PretrainedConfig
 from transformers.utils import logging
@@ -39,7 +39,7 @@ class InternVLChatConfig(PretrainedConfig):
             max_dynamic_patch=6,
             **kwargs):
         super().__init__(**kwargs)
-        logger.info(f'internvl chat configuraion constructor is being called')
+
         if vision_config is None:
             vision_config = {}
             logger.info('vision_config is None. Initializing the InternVisionConfig with default values.')

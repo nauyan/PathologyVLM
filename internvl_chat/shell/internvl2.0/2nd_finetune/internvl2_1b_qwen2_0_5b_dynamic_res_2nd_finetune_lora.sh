@@ -1,17 +1,22 @@
 set -x
 
 GPUS=${GPUS:-2}
-BATCH_SIZE=${BATCH_SIZE:-16}
-PER_DEVICE_BATCH_SIZE=${PER_DEVICE_BATCH_SIZE:-4}
+USE_LLM_LORA=${USE_LLM_LORA:-0}
+USE_BACKBONE_LORA=${USE_BACKBONE_LORA:-0}
+BATCH_SIZE=${BATCH_SIZE:-1}
+PER_DEVICE_BATCH_SIZE=${PER_DEVICE_BATCH_SIZE:-1}
 GRADIENT_ACC=$((BATCH_SIZE / PER_DEVICE_BATCH_SIZE / GPUS))
-
+OUTPUT_DIR=${OUTPUT_DIR:-'work_dirs/lora_weights'}
+NUM_EPOCHS=${NUM_EPOCHS:-1}
 
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 export MASTER_PORT=34229
 export TF_CPP_MIN_LOG_LEVEL=3
 export LAUNCHER=pytorch
 
-OUTPUT_DIR='work_dirs/internvl_chat_v2_0/internvl2_1b_qwen2_0_5b_dynamic_res_2nd_finetune_lora'
+# OUTPUT_DIR='work_dirs/internvl_chat_v2_0/internvl2_1b_qwen2_0_5b_dynamic_res_2nd_finetune_lora'
+# OUTPUT_DIR='work_dirs/lora_epochs_25'
+
 
 if [ ! -d "$OUTPUT_DIR" ]; then
   mkdir -p "$OUTPUT_DIR"
@@ -29,23 +34,24 @@ torchrun \
   --nproc_per_node=${GPUS} \
   --master_port=${MASTER_PORT} \
   internvl/train/internvl_chat_finetune.py \
-  --model_name_or_path "./pretrained/InternVL2-1B" \
+  --model_name_or_path "./pretrained/InternVL2_1B" \
   --conv_style "Hermes-2" \
   --output_dir ${OUTPUT_DIR} \
-  --meta_path "./shell/data/internvl_1_2_finetune_custom.json" \
+  --meta_path "./shell/data/tcga_kirc.json"\
   --overwrite_output_dir True \
-  --force_image_size 448 \
+  --force_image_size 224 \
   --max_dynamic_patch 6 \
   --down_sample_ratio 0.5 \
   --drop_path_rate 0.0 \
   --freeze_llm True \
-  --freeze_mlp True \
+  --freeze_mlp False \
   --freeze_backbone True \
-  --use_llm_lora 16 \
+  --use_llm_lora ${USE_LLM_LORA} \
+  --use_backbone_lora ${USE_BACKBONE_LORA}\
   --vision_select_layer -1 \
   --dataloader_num_workers 4 \
   --bf16 True \
-  --num_train_epochs 1 \
+  --num_train_epochs ${NUM_EPOCHS} \
   --per_device_train_batch_size ${PER_DEVICE_BATCH_SIZE} \
   --gradient_accumulation_steps ${GRADIENT_ACC} \
   --evaluation_strategy "no" \
@@ -66,4 +72,5 @@ torchrun \
   --ps_version 'v2' \
   --deepspeed "zero_stage1_config.json" \
   --report_to "tensorboard" \
+  --vision_path "internvl/model/internvl_chat/virchow.py"\
   2>&1 | tee -a "${OUTPUT_DIR}/training_log.txt"

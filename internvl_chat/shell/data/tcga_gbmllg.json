@@ -1,0 +1,9 @@
+{
+    "tcga_gbmllg": {
+      "root": "data/tcga_gbmllg",
+      "annotation": "data/tcga_gbmllg/annotations/TCGA_GBMLLG.jsonl",
+      "data_augment": true,
+      "repeat_time": 1,
+      "length": 588
+    }
+  }

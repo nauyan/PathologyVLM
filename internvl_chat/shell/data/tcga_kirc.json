@@ -1,0 +1,9 @@
+{
+    "tcga_kirc": {
+      "root": "data/TCGA_KIRC",
+      "annotation": "data/TCGA_KIRC/annotations/TCGA_KIRC_train.jsonl",
+      "data_augment": false,
+      "repeat_time": 1,
+      "length": 9050
+    }
+  }
