@@ -99,3 +99,45 @@ GPUS=8 PER_DEVICE_BATCH_SIZE=4 sh shell/internvl2.0/2nd_finetune/internvl_chat/s
   --freeze_llm True \
   --freeze_mlp False \
   --freeze_backbone True
+```
+
+## Inference
+
+Once the model is fine-tuned and you have the checkpoint, you can use the `inference_v2.py` script to generate captions for histopathology images.
+
+### Requirements
+
+Ensure you have the following before running the script:
+
+- A pretrained model and fine-tuned checkpoint.
+- A suitable image (histopathology image) for inference.
+
+### Running the Inference Script
+
+You can run the inference script with the following command:
+
+```bash
+python inference_v2.py \
+  --model_path <path_to_pretrained_model> \
+  --checkpoint_path <path_to_fine_tuned_checkpoint> \
+  --image_path <path_to_image_for_inference> \
+  --image_path_train <path_to_image_for_training> \
+  --device <cuda_or_cpu> \
+  --input_size <image_input_size> \
+  --use_llm_lora <LLM_adapter_rank> \
+  --use_backbone_lora <backbone_adapter_rank>
+```
+
+## Evalution
+We have written a `custom_eval.py` script for evaluating the vision language model based on the rouge-score.
+```bash
+python custom_eval.py \
+    --model_path <path_to_pretrained_model> \
+    --checkpoint_path <path_to_checkpoint> \
+    --jsonl_path <path_to_jsonl_file> \
+    --device <cuda_or_cpu> \
+    --input_size <image_input_size> \
+    --use_llm_lora <llm_lora_rank> \
+    --use_backbone_lora <backbone_lora_rank>
+```
+
