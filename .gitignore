@@ -8,8 +8,7 @@ flash-attention
 internvl_chat/pretrained
 internvl_chat/data
 internvl_chat/work_dirs
-inference_v2.py
-
+/inference_v2.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
