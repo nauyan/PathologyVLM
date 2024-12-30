@@ -8,7 +8,7 @@ from PIL import Image
 from transformers import AutoConfig
 
 # Needs to be updated
-login("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")
+login("<hugging-face-token>")
 
 
 # need to specify MLP layer and activation function for proper init
