@@ -45,7 +45,6 @@ After that create a json file in the directory `internvl_chat/shell/data/coco_ca
 Finally set the `--metapath` flag in the bash script `internvl_chat/shell/internvl2.0/2nd_finetune/internvl2_1b_qwen2_0_5b_dynamic_res_2nd_finetune_full.sh` to `./shell/data/{dataset_name}`
 
 # Training
-# Vision-Language Model Training
 
 After completing the setup, you can fine-tune the Vision-Language Model using the following training script. Below are the customizable flags used in the training process and their respective explanations.
 
